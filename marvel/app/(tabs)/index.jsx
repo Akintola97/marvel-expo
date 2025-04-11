@@ -8,7 +8,7 @@ import Entertainment from "../components/Entertainment";
 
 const Home = () => {
   return (
-    <SafeAreaView>
+    <SafeAreaView style={{ flex: 1 }}>
     <ScrollView>
     <View>
       <Hero />
