@@ -1,15 +1,79 @@
-// app/(tabs)/_layout.jsx
-import { Tabs } from 'expo-router';
+import { Tabs } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function TabsLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
-      {/* The tab bar will show these screens */}
-      {/* The default route is now index.jsx */}
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        // Hide labels
+        tabBarShowLabel: false,
+        // Tab bar container styling
+        tabBarStyle: {
+          position: "absolute",
+          bottom: 16,
+          left: 16,
+          right: 16,
+          height: 60,
+          backgroundColor: "#fff",
+          borderRadius: 12,
+          // Elevation/shadow for Android
+          elevation: 4,
+          // iOS shadow
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+        },
+        // Icon colors
+        tabBarActiveTintColor: "#2563EB", // or your brand color
+        tabBarInactiveTintColor: "#9CA3AF", // lighter gray
+      }}
+    >
+      {/* Home Tab */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "home-sharp" : "home-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
 
-      {/* And there's also an explore screen */}
-      <Tabs.Screen name="explore" options={{ title: 'Explore' }} />
+      {/* Search Tab */}
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: "Search",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "search-sharp" : "search-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Saved Tab */}
+      <Tabs.Screen
+        name="saved"
+        options={{
+          title: "Saved",
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons
+              name={focused ? "bookmark" : "bookmark-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
