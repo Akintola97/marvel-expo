@@ -98,7 +98,7 @@ export default function Comics() {
               uri: `${item?.thumbnail?.path}.${item?.thumbnail?.extension}`
             }}
             style={styles.cardImage}
-            resizeMode="cover"
+            resizeMode="contain"  // Changed to "contain" for full image visibility
           />
 
           {/* Semi-transparent overlay to darken the image */}
@@ -168,8 +168,13 @@ export default function Comics() {
                   source={{
                     uri: `${selectedComic?.thumbnail?.path}.${selectedComic?.thumbnail?.extension}`
                   }}
-                  style={{ width: "100%", height: 200, borderRadius: 8 }}
-                  resizeMode="cover"
+                  style={{
+                    width: "100%",
+                    height: undefined,       // Remove the fixed height
+                    aspectRatio: 1.0,        // Adjust this value based on your image dimensions (1.0 is for a square image)
+                    borderRadius: 8
+                  }}
+                  resizeMode="contain"  // Ensures the full image is displayed
                 />
                 <Text style={{ marginVertical: 8 }}>
                   {selectedComic?.description || "No description available"}
@@ -193,7 +198,7 @@ export default function Comics() {
                               uri: `${item?.thumbnail?.path}.${item?.thumbnail?.extension}`
                             }}
                             style={{ width: "100%", height: 100, borderRadius: 8 }}
-                            resizeMode="cover"
+                            resizeMode="contain"
                           />
                           <Text style={{ marginTop: 4, textAlign: "center" }}>
                             {item?.title}
@@ -216,21 +221,22 @@ export default function Comics() {
   );
 }
 
-// Add some styles for the overlay and container:
+// Updated styles for the comic card
 const styles = StyleSheet.create({
   cardContainer: {
     position: "relative",
     width: "100%",
-    height: 240,
+    height: 240, // You may adjust this or consider using aspectRatio if needed
     borderRadius: 8,
     overflow: "hidden"
   },
   cardImage: {
     width: "100%",
-    height: "100%"
+    height: "100%",
+    // Optionally, you can add aspectRatio: 1 if your images are square:
+    // aspectRatio: 1,
   },
   overlay: {
-    // Make a semi-transparent black overlay on top of the image
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.25)"
   },
