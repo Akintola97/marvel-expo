@@ -1,254 +1,261 @@
 import React, { useEffect, useState, useContext } from "react";
 import {
   View,
-  Text,
-  Image,
   FlatList,
-  TouchableOpacity,
   ScrollView,
+  Image,
+  Text,
+  TouchableOpacity,
   StyleSheet,
-  Dimensions
+  Dimensions,
 } from "react-native";
 import axios from "axios";
 import { Button, Dialog, Portal, ActivityIndicator } from "react-native-paper";
 import YoutubePlayer from "react-native-youtube-iframe";
 import { FontAwesome } from "@expo/vector-icons";
-// Import SavedContext for global saved items functionality
 import { SavedContext } from "../context/savedContext";
+import EntertainmentCard from "../components/EntertainmentCard";
+
+const screenWidth  = Dimensions.get("window").width;
+const playerWidth  = screenWidth - 32;
+const playerHeight = playerWidth * (9 / 16);
 
 export default function Entertainment() {
-  const [entertainment, setEntertainment] = useState([]);
-  const [showAll, setShowAll] = useState(false);
-  const [visibleEntertainment, setVisibleEntertainment] = useState(10);
+  const [entertainment, setEntertainment]           = useState([]);
+  const [showAll, setShowAll]                       = useState(false);
+  const [visibleEntertainment, setVisible]          = useState(10);
 
-  // Modal state
-  const [open, setOpen] = useState(false);
-  const [selectedEntertainment, setSelectedEntertainment] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
-  const [trailerKey, setTrailerKey] = useState(null);
+  const [open, setOpen]                             = useState(false);
+  const [selectedEntertainment, setSelected]        = useState(null);
+  const [recommendations, setRecommendations]       = useState([]);
+  const [recommendationsLoading, setRecoLoading]    = useState(false);
+  const [trailerKey, setTrailerKey]                 = useState(null);
 
-  // Saved items context
   const { savedItems, toggleSaveItem } = useContext(SavedContext);
 
-  // Calculate responsive dimensions for the YoutubePlayer or image in the modal
-  const screenWidth = Dimensions.get("window").width;
-  // Suppose you have horizontal padding of 32 (16 on each side) in the modal container
-  const playerWidth = screenWidth - 32;
-  const playerHeight = playerWidth * (9 / 16); // Maintain 16:9 aspect ratio
+  // Fetch main entertainment list
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await axios.get(
+          "https://hero.boltluna.io/api/entertainment"
+        );
+        setEntertainment(data);
+      } catch (err) {
+        console.error("Error fetching entertainment:", err);
+      }
+    })();
+  }, []);
 
-  // Toggle the number of visible items
+  const isEntertainmentSaved = (id) =>
+    savedItems.some((item) => item.id === id);
+
   const toggleView = () => {
-    setShowAll((prev) => {
-      const newShowAll = !prev;
-      setVisibleEntertainment(newShowAll ? entertainment.length : 10);
-      return newShowAll;
+    setShowAll(prev => {
+      const next = !prev;
+      setVisible(next ? entertainment.length : 10);
+      return next;
     });
   };
 
-  // Fetch on mount
-  useEffect(() => {
-    const fetchEntertainment = async () => {
-      try {
-        const response = await axios.get("https://hero.boltluna.io/api/entertainment");
-        setEntertainment(response.data);
-      } catch (error) {
-        console.error("Error fetching entertainment:", error);
-      }
-    };
-    fetchEntertainment();
-  }, []);
-
-  // Check if item is saved
-  const isEntertainmentSaved = (id) => savedItems.some((item) => item.id === id);
-
-  // Fetch recommendations for selected item
-  const fetchEntertainmentRecommendations = async (item) => {
-    setRecommendationsLoading(true);
-    try {
-      const res = await axios.post("https://hero.boltluna.io/api/entertainmentrecommendation", {
-        itemDetails: {
-          title: item?.title || item?.name,
-          type: "Entertainment",
-          description: item?.overview || ""
-        }
-      });
-      setRecommendations(res.data.recommendations);
-    } catch (error) {
-      console.error("Failed to fetch recommendations:", error);
-    } finally {
-      setRecommendationsLoading(false);
+  // Always normalize to "movie" or "tv" and pick the right TMDB id
+  const fetchTrailer = async (item) => {
+    const tmdbId = item.id ?? item.details?.id;
+    if (!tmdbId) {
+      console.warn("Skipping trailer fetch—no TMDB id");
+      return;
     }
-  };
+    const lowerType = (item.type ?? "").toLowerCase();
+    const mediaType = lowerType.includes("tv") ? "tv" : "movie";
 
-  // Fetch trailer
-  const fetchTrailerKey = async (item) => {
     try {
-      const res = await axios.post("https://hero.boltluna.io/api/trailer", {
-        media_type: item?.type,
-        id: item?.id
-      });
+      const res = await axios.post(
+        "https://hero.boltluna.io/api/trailer",
+        { media_type: mediaType, id: tmdbId }
+      );
       setTrailerKey(res.data.trailerKey);
-    } catch (error) {
-      console.error("Error fetching trailer key:", error);
+    } catch (err) {
+      console.error("Error fetching trailer:", err);
     }
   };
 
-  // Open modal
-  const handleClickOpen = (item) => {
-    setSelectedEntertainment(item);
+  // Fetch AI recommendations, then flatten out TMDB details into top-level fields
+  const fetchRecommendations = async (item) => {
+    setRecoLoading(true);
+    try {
+      const { data } = await axios.post(
+        "https://hero.boltluna.io/api/entertainmentrecommendation",
+        {
+          itemDetails: {
+            title:       item.title || item.name,
+            type:        item.type,
+            description: item.overview || item.description || ""
+          }
+        }
+      );
+
+      // flatten: pull id, overview, poster_path off of .details if needed
+      const recs = data.recommendations.map(r => {
+        const tmdbId     = r.id ?? r.details?.id;
+        const overview   = r.overview ?? r.details?.overview;
+        const posterPath = r.poster_path ?? r.details?.poster_path;
+        return {
+          ...r,
+          id:           tmdbId,
+          overview,
+          poster_path:  posterPath
+        };
+      });
+
+      setRecommendations(recs);
+    } catch (err) {
+      console.error("Failed to fetch recommendations:", err);
+    } finally {
+      setRecoLoading(false);
+    }
+  };
+
+  const handleOpen = (item) => {
+    setSelected(item);
     setOpen(true);
     setRecommendations([]);
     setTrailerKey(null);
-    fetchTrailerKey(item);
-    fetchEntertainmentRecommendations(item);
+    fetchTrailer(item);
+    fetchRecommendations(item);
   };
 
-  // Close modal
   const handleClose = () => {
     setOpen(false);
-    setSelectedEntertainment(null);
+    setSelected(null);
     setRecommendations([]);
     setTrailerKey(null);
   };
 
-  // Render a single entertainment card
-  const renderEntertainment = ({ item }) => (
-    <TouchableOpacity onPress={() => handleClickOpen(item)}>
-      <View style={{ width: 160, marginRight: 16 }}>
-        <View style={styles.cardContainer}>
-          <Image
-            source={{ uri: `https://image.tmdb.org/t/p/original${item?.poster_path}` }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
-          {/* Semi-transparent overlay */}
-          <View style={styles.overlay} />
-          {/* Heart icon */}
-          <TouchableOpacity
-            onPress={() => toggleSaveItem(item)}
-            style={styles.heartIconContainer}
-          >
-            {isEntertainmentSaved(item.id) ? (
-              <FontAwesome name="heart" size={24} color="red" />
-            ) : (
-              <FontAwesome name="heart-o" size={24} color="red" />
-            )}
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.cardTitle}>{item?.title || item?.name}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const entertainmentToRender = entertainment.slice(0, visibleEntertainment);
-
   return (
-    <View style={{ padding: 16, flex: 1, backgroundColor: "#F7FAFC", paddingBottom: 60 }}>
-      {/* Header with Title and Toggle Button */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ fontSize: 24, fontWeight: "600", color: "#4A5568" }}>
-          Browse Featured <Text style={{ fontWeight: "700", color: "#000" }}>Titles</Text>
+    <View style={{ padding: 16, flex: 1, backgroundColor: "#F7FAFC" }}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          Browse Featured <Text style={styles.titleBold}>Titles</Text>
         </Text>
         <Button mode="contained" onPress={toggleView}>
           {showAll ? "View Less" : "View All"}
         </Button>
       </View>
 
-      {/* Entertainment List (horizontal) */}
+      {/* Main list */}
       <FlatList
-        data={entertainmentToRender}
-        keyExtractor={(item) => item?.id?.toString()}
-        renderItem={renderEntertainment}
+        data={entertainment.slice(0, visibleEntertainment)}
+        keyExtractor={item => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16 }}
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        renderItem={({ item }) => (
+          <EntertainmentCard
+            item={item}
+            onOpen={handleOpen}
+            onToggleSave={toggleSaveItem}
+            isSaved={isEntertainmentSaved}
+          />
+        )}
       />
 
-      {/* Modal / Dialog */}
+      {/* Modal */}
       <Portal>
         <Dialog
           visible={open}
           onDismiss={handleClose}
-          // Make the dialog responsive on larger screens
           style={{ width: "90%", alignSelf: "center" }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              paddingHorizontal: 16,
-              paddingTop: 16
-            }}
-          >
+          <View style={styles.modalHeader}>
             <Dialog.Title>
               {selectedEntertainment?.title || selectedEntertainment?.name}
             </Dialog.Title>
             {selectedEntertainment && (
-              <TouchableOpacity onPress={() => toggleSaveItem(selectedEntertainment)}>
-                {isEntertainmentSaved(selectedEntertainment.id) ? (
-                  <FontAwesome name="heart" size={24} color="red" />
-                ) : (
-                  <FontAwesome name="heart-o" size={24} color="red" />
-                )}
+              <TouchableOpacity
+                onPress={() => toggleSaveItem(selectedEntertainment)}
+              >
+                <FontAwesome
+                  name={
+                    isEntertainmentSaved(selectedEntertainment.id)
+                      ? "heart"
+                      : "heart-o"
+                  }
+                  size={24}
+                  color="red"
+                />
               </TouchableOpacity>
             )}
           </View>
+
           <Dialog.Content>
             {selectedEntertainment && (
               <ScrollView>
                 {trailerKey ? (
-                  <View style={{ alignSelf: "center", marginBottom: 16 }}>
-                    <YoutubePlayer
-                      height={playerHeight}
-                      width={playerWidth}
-                      play={false}
-                      videoId={trailerKey}
-                    />
-                  </View>
-                ) : (
+                  <YoutubePlayer
+                    height={playerHeight}
+                    width={playerWidth}
+                    play={false}
+                    videoId={trailerKey}
+                  />
+                ) : selectedEntertainment.poster_path ? (
                   <Image
-                    source={{ uri: `https://image.tmdb.org/t/p/original${selectedEntertainment?.poster_path}` }}
-                    style={{ width: playerWidth, height: playerHeight, borderRadius: 8, alignSelf: "center", marginBottom: 16 }}
+                    source={{
+                      uri: `https://image.tmdb.org/t/p/original${selectedEntertainment.poster_path}`
+                    }}
+                    style={[
+                      styles.modalImage,
+                      { width: playerWidth, height: playerHeight }
+                    ]}
                     resizeMode="cover"
                   />
+                ) : (
+                  <View
+                    style={{
+                      width: playerWidth,
+                      height: playerHeight,
+                      backgroundColor: "#E2E8F0",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      borderRadius: 8,
+                      marginBottom: 16
+                    }}
+                  >
+                    <Text>No image available</Text>
+                  </View>
                 )}
-                <Text style={{ marginVertical: 8 }}>
-                  {selectedEntertainment?.overview || "No description available"}
+
+                <Text style={styles.description}>
+                  {selectedEntertainment.overview
+                    ?? selectedEntertainment.description
+                    ?? "No description available"}
                 </Text>
-                <Text style={{ fontSize: 18, fontWeight: "700", marginVertical: 8 }}>
-                  You Might Also Like
-                </Text>
+
+                <Text style={styles.recommendHeader}>You Might Also Like</Text>
                 {recommendationsLoading ? (
-                  <ActivityIndicator animating={true} />
+                  <ActivityIndicator animating />
                 ) : (
                   <FlatList
                     data={recommendations}
-                    keyExtractor={(_, index) => index.toString()}
                     horizontal
+                    keyExtractor={(_, i) => i.toString()}
                     showsHorizontalScrollIndicator={false}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity onPress={() => handleClickOpen(item)}>
-                        <View style={{ width: 120, marginRight: 16 }}>
-                          <Image
-                            source={{ uri: `https://image.tmdb.org/t/p/original${item?.poster_path}` }}
-                            style={{ width: "100%", height: 100, borderRadius: 8 }}
-                            resizeMode="cover"
-                          />
-                          <Text style={{ marginTop: 4, textAlign: "center" }}>
-                            {item?.title || item?.name}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    )}
                     contentContainerStyle={{ paddingHorizontal: 8 }}
+                    renderItem={({ item }) => (
+                      <EntertainmentCard
+                        item={item}
+                        onOpen={handleOpen}
+                        onToggleSave={toggleSaveItem}
+                        isSaved={isEntertainmentSaved}
+                      />
+                    )}
                   />
                 )}
               </ScrollView>
             )}
           </Dialog.Content>
+
           <Dialog.Actions>
             <Button onPress={handleClose}>Close</Button>
           </Dialog.Actions>
@@ -258,32 +265,39 @@ export default function Entertainment() {
   );
 }
 
-// Styles for overlay effect and card presentation
 const styles = StyleSheet.create({
-  cardContainer: {
-    position: "relative",
-    width: "100%",
-    height: 240,
-    borderRadius: 8,
-    overflow: "hidden"
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
-  cardImage: {
-    width: "100%",
-    height: "100%"
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.25)"
-  },
-  heartIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8
-  },
-  cardTitle: {
-    marginTop: 8,
-    textAlign: "center",
+  title: {
+    fontSize: 24,
     fontWeight: "600",
-    color: "#2D3748"
+    color: "#4A5568"
+  },
+  titleBold: {
+    fontWeight: "700",
+    color: "#000"
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16
+  },
+  modalImage: {
+    borderRadius: 8,
+    alignSelf: "center",
+    marginBottom: 16
+  },
+  description: {
+    marginVertical: 8
+  },
+  recommendHeader: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginVertical: 8
   }
 });

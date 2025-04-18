@@ -1,23 +1,27 @@
 import React, { useEffect, useState, useContext } from "react";
 import {
   View,
-  Text,
-  Image,
   FlatList,
-  TouchableOpacity,
   ScrollView,
+  Image,
+  Text,
+  TouchableOpacity,
   StyleSheet
 } from "react-native";
 import axios from "axios";
-import { Button, Dialog, Portal, ActivityIndicator } from "react-native-paper";
+import {
+  Button,
+  Dialog,
+  Portal,
+  ActivityIndicator
+} from "react-native-paper";
 import { FontAwesome } from "@expo/vector-icons";
-// Import SavedContext from your context file:
 import { SavedContext } from "../context/savedContext";
+import ComicCard from "../components/ComicCard";
 
-// Helper function to return a secure image URL
+// Helper to force HTTPS on thumbnails
 const getSecureImageUrl = (thumbnail) => {
   if (!thumbnail) return "";
-  // Force HTTPS for the image URL
   const path = thumbnail.path.startsWith("http:")
     ? thumbnail.path.replace("http:", "https:")
     : thumbnail.path;
@@ -35,52 +39,50 @@ export default function Comics() {
 
   const { savedItems, toggleSaveItem } = useContext(SavedContext);
 
-  // Fetch comics on mount
   useEffect(() => {
-    const fetchComics = async () => {
+    (async () => {
       try {
-        const response = await axios.get("https://hero.boltluna.io/api/comics");
-        setComics(response.data);
-      } catch (error) {
-        console.error("Error fetching comics:", error);
+        const { data } = await axios.get(
+          "https://hero.boltluna.io/api/comics"
+        );
+        setComics(data);
+      } catch (err) {
+        console.error("Error fetching comics:", err);
       }
-    };
-    fetchComics();
+    })();
   }, []);
 
-  // Helper: Check if a comic is saved
-  const isComicSaved = (comicId) =>
-    savedItems.some((comic) => comic.id === comicId);
+  const isComicSaved = (id) => savedItems.some((c) => c.id === id);
 
-  // Toggle the "View All" or first 10 comics
   const toggleView = () => {
     setShowAll((prev) => {
-      const newShowAll = !prev;
-      setVisibleComics(newShowAll ? comics.length : 10);
-      return newShowAll;
+      const next = !prev;
+      setVisibleComics(next ? comics.length : 10);
+      return next;
     });
   };
 
-  // Fetch recommendations for a given comic
   const fetchComicRecommendations = async (comic) => {
     setRecommendationsLoading(true);
     try {
-      const res = await axios.post("https://hero.boltluna.io/api/comicrecommendation", {
-        itemDetails: {
-          title: comic?.title,
-          type: "Comic",
-          description: comic?.description || ""
+      const res = await axios.post(
+        "https://hero.boltluna.io/api/comicrecommendation",
+        {
+          itemDetails: {
+            title: comic.title,
+            type: "Comic",
+            description: comic.description || ""
+          }
         }
-      });
+      );
       setRecommendations(res.data.recommendations);
-    } catch (error) {
-      console.error("Failed to fetch comic recommendations:", error);
+    } catch (err) {
+      console.error("Failed to fetch recommendations:", err);
     } finally {
       setRecommendationsLoading(false);
     }
   };
 
-  // Open modal to show comic details and recommendations
   const handleClickOpen = (comic) => {
     setSelectedComic(comic);
     setOpen(true);
@@ -88,79 +90,52 @@ export default function Comics() {
     fetchComicRecommendations(comic);
   };
 
-  // Close modal
   const handleClose = () => {
     setOpen(false);
     setSelectedComic(null);
     setRecommendations([]);
   };
 
-  // Decide which comics to render
-  const comicsToRender = comics.slice(0, visibleComics);
-
-  // Render each comic card with overlay and save icon
-  const renderComic = ({ item }) => (
-    <TouchableOpacity onPress={() => handleClickOpen(item)}>
-      <View style={{ width: 160, marginRight: 16 }}>
-        <View style={styles.cardContainer}>
-          <Image
-            source={{ uri: getSecureImageUrl(item?.thumbnail) }}
-            style={styles.cardImage}
-            resizeMode="contain"
-          />
-
-          {/* Semi-transparent overlay to darken the image */}
-          <View style={styles.overlay} />
-
-          {/* Heart icon overlay for saving/unsaving */}
-          <TouchableOpacity
-            onPress={() => toggleSaveItem(item)}
-            style={styles.heartIconContainer}
-          >
-            {isComicSaved(item.id) ? (
-              <FontAwesome name="heart" size={24} color="red" />
-            ) : (
-              <FontAwesome name="heart-o" size={24} color="red" />
-            )}
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.cardTitle}>{item?.title}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={{ padding: 16, flex: 1 }}>
       {/* Header */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ fontSize: 24, fontWeight: "600", color: "#4A5568" }}>
-          Discover <Text style={{ fontWeight: "700", color: "#000" }}>Comics</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          Discover <Text style={styles.titleBold}>Comics</Text>
         </Text>
         <Button mode="contained" onPress={toggleView}>
           {showAll ? "View Less" : "View All"}
         </Button>
       </View>
 
-      {/* Horizontal list of comics */}
+      {/* Comics list */}
       <FlatList
-        data={comicsToRender}
-        keyExtractor={(comic) => comic?.id?.toString()}
-        renderItem={renderComic}
+        data={comics.slice(0, visibleComics)}
+        keyExtractor={(item) => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16 }}
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        renderItem={({ item }) => (
+          <ComicCard
+            item={item}
+            onOpen={handleClickOpen}
+            onToggleSave={toggleSaveItem}
+            isSaved={isComicSaved}
+          />
+        )}
       />
 
-      {/* Modal for comic details and recommendations */}
+      {/* Modal/Dialog */}
       <Portal>
         <Dialog visible={open} onDismiss={handleClose}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 16 }}>
-            <Text style={{ fontSize: 20, fontWeight: "600", color: "#000" }}>
-              {selectedComic?.title}
-            </Text>
+          {/* Modal header with heart icon */}
+          <View style={styles.modalHeader}>
+            <Dialog.Title>{selectedComic?.title}</Dialog.Title>
             {selectedComic && (
-              <TouchableOpacity onPress={() => toggleSaveItem(selectedComic)}>
+              <TouchableOpacity
+                onPress={() => toggleSaveItem(selectedComic)}
+              >
                 {isComicSaved(selectedComic.id) ? (
                   <FontAwesome name="heart" size={24} color="red" />
                 ) : (
@@ -169,53 +144,47 @@ export default function Comics() {
               </TouchableOpacity>
             )}
           </View>
+
           <Dialog.Content>
             {selectedComic && (
               <ScrollView>
                 <Image
-                  source={{ uri: getSecureImageUrl(selectedComic?.thumbnail) }}
-                  style={{
-                    width: "100%",
-                    height: undefined,
-                    aspectRatio: 1.0,
-                    borderRadius: 8
+                  source={{
+                    uri: getSecureImageUrl(selectedComic.thumbnail)
                   }}
+                  style={styles.modalImage}
                   resizeMode="contain"
                 />
-                <Text style={{ marginVertical: 8 }}>
-                  {selectedComic?.description || "No description available"}
+                <Text style={styles.description}>
+                  {selectedComic.description ||
+                    "No description available"}
                 </Text>
-                <Text style={{ fontSize: 18, fontWeight: "700", marginVertical: 8 }}>
+                <Text style={styles.recommendHeader}>
                   You Might Also Like
                 </Text>
                 {recommendationsLoading ? (
-                  <ActivityIndicator animating={true} />
+                  <ActivityIndicator />
                 ) : (
                   <FlatList
                     data={recommendations}
-                    keyExtractor={(_, index) => index.toString()}
                     horizontal
+                    keyExtractor={(_, i) => i.toString()}
                     showsHorizontalScrollIndicator={false}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity onPress={() => handleClickOpen(item)}>
-                        <View style={{ width: 120, marginRight: 16 }}>
-                          <Image
-                            source={{ uri: getSecureImageUrl(item?.thumbnail) }}
-                            style={{ width: "100%", height: 100, borderRadius: 8 }}
-                            resizeMode="contain"
-                          />
-                          <Text style={{ marginTop: 4, textAlign: "center" }}>
-                            {item?.title}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    )}
                     contentContainerStyle={{ paddingHorizontal: 8 }}
+                    renderItem={({ item }) => (
+                      <ComicCard
+                        item={item}
+                        onOpen={handleClickOpen}
+                        onToggleSave={toggleSaveItem}
+                        isSaved={isComicSaved}
+                      />
+                    )}
                   />
                 )}
               </ScrollView>
             )}
           </Dialog.Content>
+
           <Dialog.Actions>
             <Button onPress={handleClose}>Close</Button>
           </Dialog.Actions>
@@ -226,30 +195,40 @@ export default function Comics() {
 }
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    position: "relative",
-    width: "100%",
-    height: 240,
-    borderRadius: 8,
-    overflow: "hidden"
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
-  cardImage: {
-    width: "100%",
-    height: "100%"
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.25)"
-  },
-  heartIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8
-  },
-  cardTitle: {
-    marginTop: 8,
-    textAlign: "center",
+  title: {
+    fontSize: 24,
     fontWeight: "600",
-    color: "#2D3748"
+    color: "#4A5568"
+  },
+  titleBold: {
+    fontWeight: "700",
+    color: "#000"
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16
+  },
+  modalImage: {
+    width: "100%",
+    height: undefined,
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 8
+  },
+  description: {
+    marginVertical: 8
+  },
+  recommendHeader: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginVertical: 8
   }
 });

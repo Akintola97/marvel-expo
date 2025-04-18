@@ -2,22 +2,26 @@ import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
-  Image,
   FlatList,
-  TouchableOpacity,
   ScrollView,
+  Image,
+  TouchableOpacity,
   StyleSheet
 } from "react-native";
 import axios from "axios";
-import { Button, Dialog, Portal, ActivityIndicator } from "react-native-paper";
+import {
+  Button,
+  Dialog,
+  Portal,
+  ActivityIndicator
+} from "react-native-paper";
 import { FontAwesome } from "@expo/vector-icons";
-// Import the SavedContext for global saved items data
 import { SavedContext } from "../context/savedContext";
+import CharacterCard from "../components/CharacterCard";
 
-// Helper function to return a secure image URL
+// Helper to force HTTPS on thumbnails
 const getSecureImageUrl = (thumbnail) => {
   if (!thumbnail) return "";
-  // Convert any HTTP to HTTPS
   const path = thumbnail.path.startsWith("http:")
     ? thumbnail.path.replace("http:", "https:")
     : thumbnail.path;
@@ -33,36 +37,24 @@ export default function Characters() {
   const [recommendations, setRecommendations] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
 
-  // Consume global saved items and toggle function from context
   const { savedItems, toggleSaveItem } = useContext(SavedContext);
 
-  // Toggle visible characters
-  const toggleView = () => {
-    setShowAll((prev) => {
-      const newShowAll = !prev;
-      setVisibleCharacters(newShowAll ? characters.length : 10);
-      return newShowAll;
-    });
-  };
-
-  // Fetch characters on mount
   useEffect(() => {
-    const fetchCharacters = async () => {
+    (async () => {
       try {
-        const response = await axios.get("https://hero.boltluna.io/api/characters");
-        setCharacters(response.data);
-      } catch (error) {
-        console.error("Error fetching characters:", error);
+        const { data } = await axios.get(
+          "https://hero.boltluna.io/api/characters"
+        );
+        setCharacters(data);
+      } catch (err) {
+        console.error("Error fetching characters:", err);
       }
-    };
-    fetchCharacters();
+    })();
   }, []);
 
-  // Check if a character is saved from the global state
-  const isCharacterSaved = (characterId) =>
-    savedItems.some((character) => character.id === characterId);
+  const isCharacterSaved = (id) =>
+    savedItems.some((c) => c.id === id);
 
-  // Fetch character recommendations
   const fetchCharacterRecommendations = async (character) => {
     setRecommendationsLoading(true);
     try {
@@ -77,14 +69,13 @@ export default function Characters() {
         }
       );
       setRecommendations(res.data.recommendations);
-    } catch (error) {
-      console.error("Failed to fetch character recommendations:", error);
+    } catch (err) {
+      console.error("Failed to fetch character recommendations:", err);
     } finally {
       setRecommendationsLoading(false);
     }
   };
 
-  // Open the modal and fetch recommendations for the selected character
   const handleClickOpen = (character) => {
     setSelectedCharacter(character);
     setOpen(true);
@@ -92,78 +83,60 @@ export default function Characters() {
     fetchCharacterRecommendations(character);
   };
 
-  // Close the modal and clear selected character and recommendations
   const handleClose = () => {
     setOpen(false);
     setSelectedCharacter(null);
     setRecommendations([]);
   };
 
-  // Render an individual character card
-  const renderCharacters = ({ item }) => (
-    <TouchableOpacity onPress={() => handleClickOpen(item)}>
-      <View style={{ width: 160, marginRight: 16 }}>
-        <View style={styles.cardContainer}>
-          <Image
-            source={{ uri: getSecureImageUrl(item.thumbnail) }}
-            style={styles.cardImage}
-            resizeMode="cover"
-          />
-
-          {/* Overlay to darken the image slightly */}
-          <View style={styles.overlay} />
-
-          {/* Heart Icon Overlay for saving */}
-          <TouchableOpacity
-            onPress={() => toggleSaveItem(item)}
-            style={styles.heartIconContainer}
-          >
-            {isCharacterSaved(item.id) ? (
-              <FontAwesome name="heart" size={24} color="red" />
-            ) : (
-              <FontAwesome name="heart-o" size={24} color="red" />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.cardTitle}>{item.name}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-
-  // Determine characters to render
-  const charactersToRender = characters.slice(0, visibleCharacters);
+  const toggleView = () => {
+    setShowAll((prev) => {
+      const next = !prev;
+      setVisibleCharacters(next ? characters.length : 10);
+      return next;
+    });
+  };
 
   return (
     <View style={{ padding: 16, flex: 1 }}>
       {/* Header */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ fontSize: 24, fontWeight: "600", color: "#4A5568" }}>
-          Discover <Text style={{ fontWeight: "700", color: "#000" }}>Characters</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>
+          Discover <Text style={styles.titleBold}>Characters</Text>
         </Text>
         <Button mode="contained" onPress={toggleView}>
           {showAll ? "View Less" : "View All"}
         </Button>
       </View>
 
-      {/* Horizontal List of Characters */}
+      {/* Character list */}
       <FlatList
-        data={charactersToRender}
+        data={characters.slice(0, visibleCharacters)}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderCharacters}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16 }}
         ItemSeparatorComponent={() => <View style={{ width: 16 }} />}
+        renderItem={({ item }) => (
+          <CharacterCard
+            item={item}
+            onOpen={handleClickOpen}
+            onToggleSave={toggleSaveItem}
+            isSaved={isCharacterSaved}
+          />
+        )}
       />
 
-      {/* Modal / Dialog for character details and recommendations */}
+      {/* Modal */}
       <Portal>
         <Dialog visible={open} onDismiss={handleClose}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 16 }}>
+          {/* Modal header with heart */}
+          <View style={styles.modalHeader}>
             <Dialog.Title>{selectedCharacter?.name}</Dialog.Title>
             {selectedCharacter && (
-              <TouchableOpacity onPress={() => toggleSaveItem(selectedCharacter)}>
+              <TouchableOpacity
+                onPress={() => toggleSaveItem(selectedCharacter)}
+              >
                 {isCharacterSaved(selectedCharacter.id) ? (
                   <FontAwesome name="heart" size={24} color="red" />
                 ) : (
@@ -172,54 +145,47 @@ export default function Characters() {
               </TouchableOpacity>
             )}
           </View>
+
           <Dialog.Content>
             {selectedCharacter && (
               <ScrollView>
-                {/* Modal image updated to show the full image */}
                 <Image
-                  source={{ uri: getSecureImageUrl(selectedCharacter.thumbnail) }}
-                  style={{
-                    width: "100%",
-                    height: undefined,
-                    aspectRatio: 1.0,
-                    borderRadius: 8
+                  source={{
+                    uri: getSecureImageUrl(selectedCharacter.thumbnail)
                   }}
+                  style={styles.modalImage}
                   resizeMode="contain"
                 />
-                <Text style={{ marginVertical: 8 }}>
-                  {selectedCharacter.description || "No description available"}
+                <Text style={styles.description}>
+                  {selectedCharacter.description ||
+                    "No description available"}
                 </Text>
-                <Text style={{ fontSize: 18, fontWeight: "700", marginVertical: 8 }}>
+                <Text style={styles.recommendHeader}>
                   You Might Also Like
                 </Text>
                 {recommendationsLoading ? (
-                  <ActivityIndicator animating={true} />
+                  <ActivityIndicator />
                 ) : (
                   <FlatList
                     data={recommendations}
-                    keyExtractor={(_, index) => index.toString()}
                     horizontal
+                    keyExtractor={(_, i) => i.toString()}
                     showsHorizontalScrollIndicator={false}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity onPress={() => handleClickOpen(item)}>
-                        <View style={{ width: 120, marginRight: 16 }}>
-                          <Image
-                            source={{ uri: getSecureImageUrl(item.thumbnail) }}
-                            style={{ width: "100%", height: 100, borderRadius: 8 }}
-                            resizeMode="contain"
-                          />
-                          <Text style={{ marginTop: 4, textAlign: "center" }}>
-                            {item.name}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    )}
                     contentContainerStyle={{ paddingHorizontal: 8 }}
+                    renderItem={({ item }) => (
+                      <CharacterCard
+                        item={item}
+                        onOpen={handleClickOpen}
+                        onToggleSave={toggleSaveItem}
+                        isSaved={isCharacterSaved}
+                      />
+                    )}
                   />
                 )}
               </ScrollView>
             )}
           </Dialog.Content>
+
           <Dialog.Actions>
             <Button onPress={handleClose}>Close</Button>
           </Dialog.Actions>
@@ -230,31 +196,40 @@ export default function Characters() {
 }
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    position: "relative",
-    width: "100%",
-    height: 240,
-    borderRadius: 8,
-    overflow: "hidden"
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
   },
-  cardImage: {
-    width: "100%",
-    height: "100%"
-  },
-  overlay: {
-    // Darken the image slightly
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.25)"
-  },
-  heartIconContainer: {
-    position: "absolute",
-    top: 8,
-    right: 8
-  },
-  cardTitle: {
-    marginTop: 8,
-    textAlign: "center",
+  title: {
+    fontSize: 24,
     fontWeight: "600",
-    color: "#2D3748"
+    color: "#4A5568"
+  },
+  titleBold: {
+    fontWeight: "700",
+    color: "#000"
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 16
+  },
+  modalImage: {
+    width: "100%",
+    height: undefined,
+    aspectRatio: 1,
+    borderRadius: 8,
+    marginBottom: 8
+  },
+  description: {
+    marginVertical: 8
+  },
+  recommendHeader: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginVertical: 8
   }
 });
