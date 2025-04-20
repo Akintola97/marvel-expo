@@ -16,20 +16,20 @@ import { FontAwesome } from "@expo/vector-icons";
 import { SavedContext } from "../context/savedContext";
 import EntertainmentCard from "../components/EntertainmentCard";
 
-const screenWidth  = Dimensions.get("window").width;
-const playerWidth  = screenWidth - 32;
+const screenWidth = Dimensions.get("window").width;
+const playerWidth = screenWidth - 32;
 const playerHeight = playerWidth * (9 / 16);
 
 export default function Entertainment() {
-  const [entertainment, setEntertainment]           = useState([]);
-  const [showAll, setShowAll]                       = useState(false);
-  const [visibleEntertainment, setVisible]          = useState(10);
+  const [entertainment, setEntertainment] = useState([]);
+  const [showAll, setShowAll] = useState(false);
+  const [visibleEntertainment, setVisible] = useState(10);
 
-  const [open, setOpen]                             = useState(false);
-  const [selectedEntertainment, setSelected]        = useState(null);
-  const [recommendations, setRecommendations]       = useState([]);
-  const [recommendationsLoading, setRecoLoading]    = useState(false);
-  const [trailerKey, setTrailerKey]                 = useState(null);
+  const [open, setOpen] = useState(false);
+  const [selectedEntertainment, setSelected] = useState(null);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recommendationsLoading, setRecoLoading] = useState(false);
+  const [trailerKey, setTrailerKey] = useState(null);
 
   const { savedItems, toggleSaveItem } = useContext(SavedContext);
 
@@ -51,7 +51,7 @@ export default function Entertainment() {
     savedItems.some((item) => item.id === id);
 
   const toggleView = () => {
-    setShowAll(prev => {
+    setShowAll((prev) => {
       const next = !prev;
       setVisible(next ? entertainment.length : 10);
       return next;
@@ -69,10 +69,10 @@ export default function Entertainment() {
     const mediaType = lowerType.includes("tv") ? "tv" : "movie";
 
     try {
-      const res = await axios.post(
-        "https://hero.boltluna.io/api/trailer",
-        { media_type: mediaType, id: tmdbId }
-      );
+      const res = await axios.post("https://hero.boltluna.io/api/trailer", {
+        media_type: mediaType,
+        id: tmdbId,
+      });
       setTrailerKey(res.data.trailerKey);
     } catch (err) {
       console.error("Error fetching trailer:", err);
@@ -87,23 +87,23 @@ export default function Entertainment() {
         "https://hero.boltluna.io/api/entertainmentrecommendation",
         {
           itemDetails: {
-            title:       item.title || item.name,
-            type:        item.type,
-            description: item.overview || item.description || ""
-          }
+            title: item.title || item.name,
+            type: item.type,
+            description: item.overview || item.description || "",
+          },
         }
       );
 
       // flatten: pull id, overview, poster_path off of .details if needed
-      const recs = data.recommendations.map(r => {
-        const tmdbId     = r.id ?? r.details?.id;
-        const overview   = r.overview ?? r.details?.overview;
+      const recs = data.recommendations.map((r) => {
+        const tmdbId = r.id ?? r.details?.id;
+        const overview = r.overview ?? r.details?.overview;
         const posterPath = r.poster_path ?? r.details?.poster_path;
         return {
           ...r,
-          id:           tmdbId,
+          id: tmdbId,
           overview,
-          poster_path:  posterPath
+          poster_path: posterPath,
         };
       });
 
@@ -146,7 +146,7 @@ export default function Entertainment() {
       {/* Main list */}
       <FlatList
         data={entertainment.slice(0, visibleEntertainment)}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item) => item.id.toString()}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 16, marginTop: 16 }}
@@ -202,11 +202,11 @@ export default function Entertainment() {
                 ) : selectedEntertainment.poster_path ? (
                   <Image
                     source={{
-                      uri: `https://image.tmdb.org/t/p/original${selectedEntertainment.poster_path}`
+                      uri: `https://image.tmdb.org/t/p/original${selectedEntertainment.poster_path}`,
                     }}
                     style={[
                       styles.modalImage,
-                      { width: playerWidth, height: playerHeight }
+                      { width: playerWidth, height: playerHeight },
                     ]}
                     resizeMode="cover"
                   />
@@ -219,7 +219,7 @@ export default function Entertainment() {
                       justifyContent: "center",
                       alignItems: "center",
                       borderRadius: 8,
-                      marginBottom: 16
+                      marginBottom: 16,
                     }}
                   >
                     <Text>No image available</Text>
@@ -227,9 +227,9 @@ export default function Entertainment() {
                 )}
 
                 <Text style={styles.description}>
-                  {selectedEntertainment.overview
-                    ?? selectedEntertainment.description
-                    ?? "No description available"}
+                  {selectedEntertainment.overview ??
+                    selectedEntertainment.description ??
+                    "No description available"}
                 </Text>
 
                 <Text style={styles.recommendHeader}>You Might Also Like</Text>
@@ -269,35 +269,35 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
     fontWeight: "600",
-    color: "#4A5568"
+    color: "#4A5568",
   },
   titleBold: {
     fontWeight: "700",
-    color: "#000"
+    color: "#000",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 16
+    paddingTop: 16,
   },
   modalImage: {
     borderRadius: 8,
     alignSelf: "center",
-    marginBottom: 16
+    marginBottom: 16,
   },
   description: {
-    marginVertical: 8
+    marginVertical: 8,
   },
   recommendHeader: {
     fontSize: 18,
     fontWeight: "700",
-    marginVertical: 8
-  }
+    marginVertical: 8,
+  },
 });

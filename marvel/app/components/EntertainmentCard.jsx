@@ -28,7 +28,7 @@ export default function EntertainmentCard({
   const doubleTapRef = useRef();
 
   return (
-    <View style={{ width: 160, marginRight: 16 }}>
+    <View style={{ width: 160, marginRight: 16, paddingBottom: 40 }}>
       <View style={styles.cardWrapper}>
         {/* Only the poster is wrapped in gesture handlers */}
         <TapGestureHandler

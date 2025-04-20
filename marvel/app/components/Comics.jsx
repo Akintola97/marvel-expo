@@ -6,15 +6,10 @@ import {
   Image,
   Text,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 import axios from "axios";
-import {
-  Button,
-  Dialog,
-  Portal,
-  ActivityIndicator
-} from "react-native-paper";
+import { Button, Dialog, Portal, ActivityIndicator } from "react-native-paper";
 import { FontAwesome } from "@expo/vector-icons";
 import { SavedContext } from "../context/savedContext";
 import ComicCard from "../components/ComicCard";
@@ -42,9 +37,7 @@ export default function Comics() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get(
-          "https://hero.boltluna.io/api/comics"
-        );
+        const { data } = await axios.get("https://hero.boltluna.io/api/comics");
         setComics(data);
       } catch (err) {
         console.error("Error fetching comics:", err);
@@ -71,8 +64,8 @@ export default function Comics() {
           itemDetails: {
             title: comic.title,
             type: "Comic",
-            description: comic.description || ""
-          }
+            description: comic.description || "",
+          },
         }
       );
       setRecommendations(res.data.recommendations);
@@ -133,9 +126,7 @@ export default function Comics() {
           <View style={styles.modalHeader}>
             <Dialog.Title>{selectedComic?.title}</Dialog.Title>
             {selectedComic && (
-              <TouchableOpacity
-                onPress={() => toggleSaveItem(selectedComic)}
-              >
+              <TouchableOpacity onPress={() => toggleSaveItem(selectedComic)}>
                 {isComicSaved(selectedComic.id) ? (
                   <FontAwesome name="heart" size={24} color="red" />
                 ) : (
@@ -150,18 +141,15 @@ export default function Comics() {
               <ScrollView>
                 <Image
                   source={{
-                    uri: getSecureImageUrl(selectedComic.thumbnail)
+                    uri: getSecureImageUrl(selectedComic.thumbnail),
                   }}
                   style={styles.modalImage}
                   resizeMode="contain"
                 />
                 <Text style={styles.description}>
-                  {selectedComic.description ||
-                    "No description available"}
+                  {selectedComic.description || "No description available"}
                 </Text>
-                <Text style={styles.recommendHeader}>
-                  You Might Also Like
-                </Text>
+                <Text style={styles.recommendHeader}>You Might Also Like</Text>
                 {recommendationsLoading ? (
                   <ActivityIndicator />
                 ) : (
@@ -198,37 +186,37 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
     fontWeight: "600",
-    color: "#4A5568"
+    color: "#4A5568",
   },
   titleBold: {
     fontWeight: "700",
-    color: "#000"
+    color: "#000",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 16
+    paddingTop: 16,
   },
   modalImage: {
     width: "100%",
     height: undefined,
     aspectRatio: 1,
     borderRadius: 8,
-    marginBottom: 8
+    marginBottom: 8,
   },
   description: {
-    marginVertical: 8
+    marginVertical: 8,
   },
   recommendHeader: {
     fontSize: 18,
     fontWeight: "700",
-    marginVertical: 8
-  }
+    marginVertical: 8,
+  },
 });

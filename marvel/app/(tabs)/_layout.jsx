@@ -11,10 +11,10 @@ export default function TabsLayout() {
         // Tab bar container styling
         tabBarStyle: {
           position: "absolute",
-          bottom: 16,
+          bottom: 2,
           left: 16,
           right: 16,
-          height: 60,
+          height: 70,
           backgroundColor: "#fff",
           borderRadius: 12,
           // Elevation/shadow for Android

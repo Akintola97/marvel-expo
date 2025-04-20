@@ -6,15 +6,10 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 import axios from "axios";
-import {
-  Button,
-  Dialog,
-  Portal,
-  ActivityIndicator
-} from "react-native-paper";
+import { Button, Dialog, Portal, ActivityIndicator } from "react-native-paper";
 import { FontAwesome } from "@expo/vector-icons";
 import { SavedContext } from "../context/savedContext";
 import CharacterCard from "../components/CharacterCard";
@@ -52,8 +47,7 @@ export default function Characters() {
     })();
   }, []);
 
-  const isCharacterSaved = (id) =>
-    savedItems.some((c) => c.id === id);
+  const isCharacterSaved = (id) => savedItems.some((c) => c.id === id);
 
   const fetchCharacterRecommendations = async (character) => {
     setRecommendationsLoading(true);
@@ -64,8 +58,8 @@ export default function Characters() {
           itemDetails: {
             title: character.name,
             type: "Character",
-            description: character.description || ""
-          }
+            description: character.description || "",
+          },
         }
       );
       setRecommendations(res.data.recommendations);
@@ -151,18 +145,15 @@ export default function Characters() {
               <ScrollView>
                 <Image
                   source={{
-                    uri: getSecureImageUrl(selectedCharacter.thumbnail)
+                    uri: getSecureImageUrl(selectedCharacter.thumbnail),
                   }}
                   style={styles.modalImage}
                   resizeMode="contain"
                 />
                 <Text style={styles.description}>
-                  {selectedCharacter.description ||
-                    "No description available"}
+                  {selectedCharacter.description || "No description available"}
                 </Text>
-                <Text style={styles.recommendHeader}>
-                  You Might Also Like
-                </Text>
+                <Text style={styles.recommendHeader}>You Might Also Like</Text>
                 {recommendationsLoading ? (
                   <ActivityIndicator />
                 ) : (
@@ -199,37 +190,37 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
   },
   title: {
     fontSize: 24,
     fontWeight: "600",
-    color: "#4A5568"
+    color: "#4A5568",
   },
   titleBold: {
     fontWeight: "700",
-    color: "#000"
+    color: "#000",
   },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 16
+    paddingTop: 16,
   },
   modalImage: {
     width: "100%",
     height: undefined,
     aspectRatio: 1,
     borderRadius: 8,
-    marginBottom: 8
+    marginBottom: 8,
   },
   description: {
-    marginVertical: 8
+    marginVertical: 8,
   },
   recommendHeader: {
     fontSize: 18,
     fontWeight: "700",
-    marginVertical: 8
-  }
+    marginVertical: 8,
+  },
 });
