@@ -37,7 +37,11 @@ export default function Comics() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.get("https://hero.boltluna.io/api/comics");
+        const { data } = await axios.get(
+          // "https://hero.boltluna.io/api/comics"
+          `${process.env.EXPO_PUBLIC_BASE_URL}/comics`
+
+        );
         setComics(data);
       } catch (err) {
         console.error("Error fetching comics:", err);

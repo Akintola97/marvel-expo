@@ -38,7 +38,9 @@ export default function Characters() {
     (async () => {
       try {
         const { data } = await axios.get(
-          "https://hero.boltluna.io/api/characters"
+          // "https://hero.boltluna.io/api/characters"
+          `${process.env.EXPO_PUBLIC_BASE_URL}/characters`
+
         );
         setCharacters(data);
       } catch (err) {

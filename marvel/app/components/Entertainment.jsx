@@ -38,7 +38,9 @@ export default function Entertainment() {
     (async () => {
       try {
         const { data } = await axios.get(
-          "https://hero.boltluna.io/api/entertainment"
+          // "https://hero.boltluna.io/api/entertainment"
+          `${process.env.EXPO_PUBLIC_BASE_URL}/entertainment`
+
         );
         setEntertainment(data);
       } catch (err) {
